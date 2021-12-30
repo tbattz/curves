@@ -165,6 +165,8 @@ class BezierCurve:
 class BezierSurface:
     """
     Creates and stores values to draw a bezier surface of order n given control points.
+
+    Based on information from https://www.gamedev.net/tutorials/programming/math-and-physics/practical-guide-to-bezier-surfaces-r3170/
     """
     def __init__(self, ctrPts, n):
         self.n = n
@@ -232,6 +234,54 @@ class BezierSurface:
                     sumXYZ[k] += self.ctrPts[i][j][k] * Biu * Bjv
 
         self.xyz = sumXYZ
+
+        return self.xyz
+
+
+    def genBezierMatrix(self):
+        """
+        Generate the middle matrix of binomail coefficients for the matrix approach to generating a bezier curve.
+        """
+        coeff = np.asarray([[self.binomial(self.n, i) * self.binomial(i, k) * (-1) ** (i - k) for k in range(i + 1)] for i in
+                 range(self.n + 1)], dtype=object)
+        coeff = np.flip(coeff, axis=0)
+
+        # Pad with zeros to create square matrix
+        return np.matrix([row + [0] * (self.n + 1 - len(row)) for row in coeff])
+
+
+    def genBezierMatrixValues(self, u, v):
+        """
+        Generate the bezier curve values using a matrix approach.
+        For a third order bezier curve.
+        S(u,v) = [v^3 v^2 v 1] * [[-1 3 -3 1], [3 -6 3 0], [-3 3 0 0], [1 0 0 0]] * [[P00, P01, P02, P03], [P10, P11, P12, P13], [P20, P21, P22, P23], [P30, P31, P32, P33]] * [[-1 3 -3 1], [3 -6 3 0], [-3 3 0 0], [1 0 0 0]] * [u^3 u^2 u 1]
+        Or S(u,v) = v*M_v*P*M_u*u
+        Where the coefficients for the middle matrix come from the binomial representation.
+
+        :param u: Is a list of paramterised values from 0 to 1.
+        :param v: Is a list of paramterised values from 0 to 1.
+        :return: Points array of shape (u, v, d) where u, v is the number of paramter points and d is the dimension, e.g. for x, y pairs, d = 2.
+        """
+        # Calculate the binomial coeff matrix
+        coeffs = self.genBezierMatrix()
+        # Repeat along xyz dims
+        coeffs = np.repeat(np.expand_dims(coeffs, axis=2), self.dim, axis=2)
+        # Make u, v matrices
+        u = np.tile(u, (v.shape[0], 1))
+        v = np.tile(v, (u.shape[0], 1)).T
+
+        # Calculate power vectors
+        upow = np.repeat(np.expand_dims(np.power(u[:,:,np.newaxis], np.arange(self.n, -1, -1)), axis=[2,4]), self.dim, axis=2)
+        vpow = np.repeat(np.expand_dims(np.power(v[:,:,np.newaxis], np.arange(self.n, -1, -1)), axis=[2,3]), self.dim, axis=2)
+
+        # Calculate mid term and prepare for broadcasting
+        midTerm = coeffs * self.ctrPts * coeffs
+        midTerm = np.moveaxis(midTerm, 2, 0)
+        midTerm = midTerm[np.newaxis, np.newaxis, :, :, :]
+
+        # Calculate the final point values.
+        xyzm = np.matmul(vpow, np.matmul(midTerm, upow)).squeeze()
+        self.xyz = xyzm
 
         return self.xyz
 
@@ -310,13 +360,14 @@ if __name__ == '__main__':
     v = np.linspace(0,1,10)
     bs = BezierSurface(ctrPts, n=3)
     xyz = bs.genStandardBezierValues(u, v)
+    xyzm = bs.genBezierMatrixValues(u, v)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     #ax.plot(xyz[0].reshape(-1), xyz[1].reshape(-1), xyz[2].reshape(-1), 'bo', label='Standard Bezier Surface')
-    ax.plot_surface(xyz[0], xyz[1], xyz[2])
-    ax.plot(ctrPts[:, :, 0].reshape(-1), ctrPts[:, :, 1].reshape(-1), ctrPts[:, :, 2].reshape(-1), 'ro',
-            label='Control Points')
+    ax.plot_surface(xyz[0], xyz[1], xyz[2], color='g', label='Bezier Surface (Standard)')
+    ax.plot_surface(xyz[0], xyz[1], xyz[2], color='y', label='Bezier Surface (Matrix')
+    ax.plot(ctrPts[:, :, 0].reshape(-1), ctrPts[:, :, 1].reshape(-1), ctrPts[:, :, 2].reshape(-1), 'ro', label='Control Points')
     plt.show()
 
 
