@@ -161,6 +161,84 @@ class BezierCurve:
 
         return xyzm
 
+
+class BezierSurface:
+    """
+    Creates and stores values to draw a bezier surface of order n given control points.
+    """
+    def __init__(self, ctrPts, n):
+        self.n = n
+        self.ctrPts = np.array(ctrPts)
+        self.dim = self.ctrPts.shape[2]
+
+        self.xyz = []
+
+        # Generate pascals triangle for the order n
+        self.lut = self.genPascalsTriangle(k=n)
+
+
+    def genPascalsTriangle(self, k=6, printTriangle=False):
+        """
+        Generate pascals triangle for order k.
+        """
+        lut = []
+        if k > -1:
+            lut.append([1])
+        if k > 0:
+            lut.append([1, 1])
+        if k > 1:
+            for i in range(1, k):
+                row = [1]
+                for j in range(0, len(lut[-1]) - 1):
+                    row.append(lut[-1][j] + lut[-1][j + 1])
+                row.append(1)
+                lut.append(row)
+
+        if printTriangle:
+            for row in lut:
+                print(row)
+
+        return lut
+
+    def binomial(self, n, k):
+        """
+        Compute the binomial using Pascal's triangle.
+        Choose k from n.
+        """
+        return self.lut[n][k]
+
+
+    def genStandardBezierValues(self, u, v):
+        """
+        Generate the point values for the surface at the given values of u and v.
+        Bezier(n,t) = sum_i=0^n Bi(n,i)*(1-t)^(n-1)*t^i*w_i
+
+        :param u: Is a list of paramterised values from 0 to 1.
+        :param v: Is a list of paramterised values from 0 to 1.
+        """
+        # t is an array of values from 0 to 1
+        sumXYZ = [0]*self.dim
+        # Make u, v matrices
+        u = np.tile(u, (v.shape[0], 1))
+        v = np.tile(v, (u.shape[0], 1)).T
+
+
+        for j in range(0, self.n+1):
+            for i in range(0, self.n+1):
+                Biu = self.binomial(self.n, i) * np.power(1-u, self.n-i) * np.power(u,i)
+                Bjv = self.binomial(self.n, j) * np.power(1-v, self.n-j) * np.power(v,j)
+
+                for k in range(0, self.dim):
+                    sumXYZ[k] += self.ctrPts[i][j][k] * Biu * Bjv
+
+        self.xyz = sumXYZ
+
+        return self.xyz
+
+
+
+
+
 if __name__ == '__main__':
     # Create points
     pts = np.array([[110, 150],
@@ -191,7 +269,7 @@ if __name__ == '__main__':
 
 
     # Try curve in 3d
-# Create points
+    # Create points
     pts = np.array([[110, 150, 25],
            [25, 190, 50],
            [210, 250, 125],
@@ -218,6 +296,27 @@ if __name__ == '__main__':
     ax.plot(xyzm[:,0], xyzm[:,1], xyzm[:,2], 'm--', label='Bezier Class (Matrix)')
 
     plt.legend()
+    plt.show()
+
+    # Try Bezier Surface
+    ctrPts = np.array([
+        [[0, 0, 20], [60, 0, -35], [90, 0, 60], [200, 0, 5]],
+        [[0, 50, 30], [100, 60, -25], [120, 50, 120], [200, 50, 5]],
+        [[0, 100, 0], [60, 120, 35], [90, 100, 60], [200, 100, 45]],
+        [[0, 150, 0], [60, 150, -35], [90, 180, 60], [200, 150, 45]]
+    ])
+
+    u = np.linspace(0,1,10)
+    v = np.linspace(0,1,10)
+    bs = BezierSurface(ctrPts, n=3)
+    xyz = bs.genStandardBezierValues(u, v)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #ax.plot(xyz[0].reshape(-1), xyz[1].reshape(-1), xyz[2].reshape(-1), 'bo', label='Standard Bezier Surface')
+    ax.plot_surface(xyz[0], xyz[1], xyz[2])
+    ax.plot(ctrPts[:, :, 0].reshape(-1), ctrPts[:, :, 1].reshape(-1), ctrPts[:, :, 2].reshape(-1), 'ro',
+            label='Control Points')
     plt.show()
 
 
