@@ -155,7 +155,7 @@ class BezierCurve:
         tVec = np.power(t[:, np.newaxis, np.newaxis], np.arange(0,self.n+1))
 
         # Calculate the final point values.
-        xyzm = tVec * xyzMatrix
+        xyzm = np.asarray(tVec * xyzMatrix)
 
         self.xyz = xyzm
 
@@ -185,6 +185,37 @@ if __name__ == '__main__':
     plt.plot(xrv, yrv, 'c--', label='Bezier Class (Rational)')
     plt.plot(xyzdcv[:,0], xyzdcv[:,1], 'g--', label='Bezier Class (de Casteljau)')
     plt.plot(xyzm2[:,0], xyzm2[:,1], 'm--', label='Bezier Class (Matrix)')
+
+    plt.legend()
+    plt.show()
+
+
+    # Try curve in 3d
+# Create points
+    pts = np.array([[110, 150, 25],
+           [25, 190, 50],
+           [210, 250, 125],
+           [210, 30, 100]])
+
+    # Create point weights for rational bezier curves
+    ratio = [1.0, 0.5, 1.5, 1.0]
+
+    # Create curve class and calculate points
+    b = BezierCurve(pts, n=3, ptWeights=ratio)
+    ta = np.linspace(0,1,100)
+    xv, yv, zv = b.genStandardBezierValues(ta)
+    xrv, yrv, zrv = b.genRationalBezierValues(ta)
+    xyzdcv = b.genBezierDeCasteljauAlgo(ta)
+    xyzm = b.genBezierMatrixValues(ta)
+
+    # Plot curves
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(pts[:,0], pts[:,1], pts[:,2], 'ro-', label='Control Points')
+    ax.plot(xv, yv, zv, 'k--', label='Bezier Class (Binomial)')
+    ax.plot(xrv, yrv, zrv, 'c--', label='Bezier Class (Rational)')
+    ax.plot(xyzdcv[:,0], xyzdcv[:,1], xyzdcv[:,2], 'g--', label='Bezier Class (de Casteljau)')
+    ax.plot(xyzm[:,0], xyzm[:,1], xyzm[:,2], 'm--', label='Bezier Class (Matrix)')
 
     plt.legend()
     plt.show()
