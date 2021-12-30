@@ -9,16 +9,16 @@ class BezierCurve:
     """
     Creates and stores values to draw a bezier curve of order n given control points.
     """
-    def __init__(self, ctrPts, n, ptWeights=None):
-        self.n = n
+    def __init__(self, ctrPts, ptWeights=None):
         self.ctrPts = np.array(ctrPts)
+        self.n = self.ctrPts.shape[0] - 1
         self.dim = self.ctrPts.shape[1]
         self.ptWeights = ptWeights
 
         self.xyz = []
 
         # Generate pascals triangle for the order n
-        self.lut = self.genPascalsTriangle(k=n)
+        self.lut = self.genPascalsTriangle(k=self.n)
 
 
     def genPascalsTriangle(self, k=6, printTriangle=False):
@@ -168,15 +168,15 @@ class BezierSurface:
 
     Based on information from https://www.gamedev.net/tutorials/programming/math-and-physics/practical-guide-to-bezier-surfaces-r3170/
     """
-    def __init__(self, ctrPts, n):
-        self.n = n
+    def __init__(self, ctrPts):
         self.ctrPts = np.array(ctrPts)
+        self.n = self.ctrPts.shape[0] - 1
         self.dim = self.ctrPts.shape[2]
 
         self.xyz = []
 
         # Generate pascals triangle for the order n
-        self.lut = self.genPascalsTriangle(k=n)
+        self.lut = self.genPascalsTriangle(k=self.n)
 
 
     def genPascalsTriangle(self, k=6, printTriangle=False):
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     ratio = [1.0, 0.5, 1.5, 1.0]
 
     # Create curve class and calculate points
-    b = BezierCurve(pts, n=3, ptWeights=ratio)
+    b = BezierCurve(pts, ptWeights=ratio)
     ta = np.linspace(0,1,100)
     xv, yv = b.genStandardBezierValues(ta)
     xrv, yrv = b.genRationalBezierValues(ta)
@@ -329,7 +329,7 @@ if __name__ == '__main__':
     ratio = [1.0, 0.5, 1.5, 1.0]
 
     # Create curve class and calculate points
-    b = BezierCurve(pts, n=3, ptWeights=ratio)
+    b = BezierCurve(pts, ptWeights=ratio)
     ta = np.linspace(0,1,100)
     xv, yv, zv = b.genStandardBezierValues(ta)
     xrv, yrv, zrv = b.genRationalBezierValues(ta)
@@ -356,9 +356,9 @@ if __name__ == '__main__':
         [[0, 150, 0], [60, 150, -35], [90, 180, 60], [200, 150, 45]]
     ])
 
-    u = np.linspace(0,1,10)
-    v = np.linspace(0,1,10)
-    bs = BezierSurface(ctrPts, n=3)
+    u = np.linspace(0,1,50)
+    v = np.linspace(0,1,50)
+    bs = BezierSurface(ctrPts)
     xyz = bs.genStandardBezierValues(u, v)
     xyzm = bs.genBezierMatrixValues(u, v)
 
